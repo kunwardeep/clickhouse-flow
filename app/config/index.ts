@@ -4,173 +4,158 @@ import type { ChConnectionSettings } from '@/app/db';
 import { ENV } from './env';
 
 export interface ConfigFile {
-  databaseConfigs: DatabaseConfigEntry[];
-  exportConfig: ExportConfig;
-  canvasConfig: CanvasConfig;
-  materializedViewsConfig: MaterializedViewsConfig;
+	databaseConfigs: DatabaseConfigEntry[];
+	exportConfig: ExportConfig;
+	canvasConfig: CanvasConfig;
+	materializedViewsConfig: MaterializedViewsConfig;
 }
 
 export interface DatabaseConfigEntry {
-  name: string;
-  config: DatabaseConfig;
+	name: string;
+	config: DatabaseConfig;
 }
 
 export interface DatabaseConfig {
-  connectionSettings: ChConnectionSettings;
-  targetDatabases: string[];
-  presentationDatabase: string;
-  respectJoins: boolean;
+	connectionSettings: ChConnectionSettings;
+	targetDatabases: string[];
+	presentationDatabase: string;
+	respectJoins: boolean;
 }
 
 export interface ExportConfig {
-  format: 'PDF' | 'SVG';
-  padding: number;
+	format: 'PDF' | 'SVG';
+	padding: number;
 }
 
 export interface CanvasConfig {
-  snapToGrid: boolean;
-  gridSize: number;
-  backgroundColor: string;
-  autoFitView: boolean;
+	snapToGrid: boolean;
+	gridSize: number;
+	backgroundColor: string;
+	autoFitView: boolean;
 }
 
 export interface MaterializedViewsConfig {
-  renderMode: 'ROWS' | 'AS_SELECT' | 'CREATE_COMMAND';
+	renderMode: 'ROWS' | 'AS_SELECT' | 'CREATE_COMMAND';
 }
 
-const defaultConfig: ConfigFile =
-{
-  databaseConfigs: [],
-  exportConfig: {
-    format: 'PDF',
-    padding: 20,
-  },
-  canvasConfig: {
-    snapToGrid: true,
-    gridSize: 15,
-    backgroundColor: "#e0e0dc",
-    autoFitView: true,
-  },
-  materializedViewsConfig: {
-    renderMode: 'AS_SELECT'
-  }
+const defaultConfig: ConfigFile = {
+	databaseConfigs: [],
+	exportConfig: {
+		format: 'PDF',
+		padding: 20,
+	},
+	canvasConfig: {
+		snapToGrid: true,
+		gridSize: 15,
+		backgroundColor: '#e0e0dc',
+		autoFitView: true,
+	},
+	materializedViewsConfig: {
+		renderMode: 'AS_SELECT',
+	},
 };
 
 function loadConfigFile(): ConfigFile | null {
-  const configPath: string = ENV.NODE_ENV !== 'production'
-    ? path.resolve('./app/config/dev-config.json')
-    : ENV.CHF_CONFIG_PATH;
+	const configPath: string = ENV.NODE_ENV !== 'production' ? path.resolve('./app/config/dev-config.json') : ENV.CHF_CONFIG_PATH;
 
-  try {
-    if (fs.existsSync(configPath)) {
-      const raw = fs.readFileSync(configPath, 'utf-8').trim();
-      return raw ? (JSON.parse(raw) as ConfigFile) : null;
-    }
-  } catch (err) {
-    console.error(`Error loading config from ${configPath}:`, err);
-  }
-  return null;
+	try {
+		if (fs.existsSync(configPath)) {
+			const raw = fs.readFileSync(configPath, 'utf-8').trim();
+			return raw ? (JSON.parse(raw) as ConfigFile) : null;
+		}
+	} catch (err) {
+		console.error(`Error loading config from ${configPath}:`, err);
+	}
+	return null;
 }
 
-function getDefaultDatabaseConfig(): { dbConfig: DatabaseConfig, configName: string } | null {
-  const {
-    CHF_DB_URL: url,
-    CHF_DB_USERNAME: username,
-    CHF_DB_PASSWORD: password,
-    CHF_DB_NAME: name } = ENV;
+function getDefaultDatabaseConfig(): { dbConfig: DatabaseConfig; configName: string } | null {
+	const { CHF_DB_URL: url, CHF_DB_USERNAME: username, CHF_DB_PASSWORD: password, CHF_DB_NAME: name } = ENV;
 
-  if (url && username && password && name) {
-    return {
-      dbConfig: {
-        connectionSettings: { url, username, password },
-        targetDatabases: [name],
-        presentationDatabase: name,
-        respectJoins: true,
-      },
-      configName: ENV.CHF_DB_CONFIG_NAME ?? name
-    };
-  }
+	if (url && username && password && name) {
+		return {
+			dbConfig: {
+				connectionSettings: { url, username, password },
+				targetDatabases: [name],
+				presentationDatabase: name,
+				respectJoins: true,
+			},
+			configName: ENV.CHF_DB_CONFIG_NAME ?? name,
+		};
+	}
 
-  return null;
+	return null;
 }
 
 function setupDbConfigs(config: ConfigFile) {
-  config.databaseConfigs ??= [];
+	config.databaseConfigs ??= [];
 
-  const defaultDbConfig = getDefaultDatabaseConfig();
+	const defaultDbConfig = getDefaultDatabaseConfig();
 
-  if (defaultDbConfig) {
-    const defaultEntry: DatabaseConfigEntry = {
-      name: defaultDbConfig.configName,
-      config: defaultDbConfig.dbConfig,
-    };
+	if (defaultDbConfig) {
+		const defaultEntry: DatabaseConfigEntry = {
+			name: defaultDbConfig.configName,
+			config: defaultDbConfig.dbConfig,
+		};
 
-    config.databaseConfigs.unshift(defaultEntry);
+		config.databaseConfigs.unshift(defaultEntry);
 
-    // TODO: default values for db configs missing properties
-  }
+		// TODO: default values for db configs missing properties
+	}
 }
 
 function substituteEnv(config: ConfigFile) {
-  config.exportConfig ??= { ...defaultConfig.exportConfig };
+	config.exportConfig ??= { ...defaultConfig.exportConfig };
 
-  config.exportConfig.format = ENV.CHF_EXPORT_FORMAT
-    ?? config.exportConfig.format
-    ?? defaultConfig.exportConfig.format;
+	config.exportConfig.format = ENV.CHF_EXPORT_FORMAT ?? config.exportConfig.format ?? defaultConfig.exportConfig.format;
 
-  config.exportConfig.padding = ENV.CHF_EXPORT_PADDING
-    ?? config.exportConfig.padding
-    ?? defaultConfig.exportConfig.padding;
+	config.exportConfig.padding = ENV.CHF_EXPORT_PADDING ?? config.exportConfig.padding ?? defaultConfig.exportConfig.padding;
 
-  config.canvasConfig ??= { ...defaultConfig.canvasConfig };
+	config.canvasConfig ??= { ...defaultConfig.canvasConfig };
 
-  config.canvasConfig.snapToGrid = ENV.CHF_CANVAS_SNAP_TO_GRID
-    ?? config.canvasConfig.snapToGrid
-    ?? defaultConfig.canvasConfig.snapToGrid;
+	config.canvasConfig.snapToGrid =
+		ENV.CHF_CANVAS_SNAP_TO_GRID ?? config.canvasConfig.snapToGrid ?? defaultConfig.canvasConfig.snapToGrid;
 
-  config.canvasConfig.gridSize = ENV.CHF_CANVAS_GRID_SIZE
-    ?? config.canvasConfig.gridSize
-    ?? defaultConfig.canvasConfig.gridSize;
+	config.canvasConfig.gridSize = ENV.CHF_CANVAS_GRID_SIZE ?? config.canvasConfig.gridSize ?? defaultConfig.canvasConfig.gridSize;
 
-  config.canvasConfig.backgroundColor = ENV.CHF_CANVAS_BACKGROUND_COLOR
-    ?? config.canvasConfig.backgroundColor
-    ?? defaultConfig.canvasConfig.backgroundColor;
+	config.canvasConfig.backgroundColor =
+		ENV.CHF_CANVAS_BACKGROUND_COLOR ?? config.canvasConfig.backgroundColor ?? defaultConfig.canvasConfig.backgroundColor;
 
-  config.canvasConfig.autoFitView = ENV.CHF_CANVAS_AUTO_FIT_VIEW
-    ?? config.canvasConfig.autoFitView
-    ?? defaultConfig.canvasConfig.autoFitView;
+	config.canvasConfig.autoFitView =
+		ENV.CHF_CANVAS_AUTO_FIT_VIEW ?? config.canvasConfig.autoFitView ?? defaultConfig.canvasConfig.autoFitView;
 
-  config.materializedViewsConfig ??= { ...defaultConfig.materializedViewsConfig };
+	config.materializedViewsConfig ??= { ...defaultConfig.materializedViewsConfig };
 
-  config.materializedViewsConfig.renderMode = ENV.CHF_MAT_VIEWS_RENDER_MODE
-    ?? config.materializedViewsConfig.renderMode
-    ?? defaultConfig.materializedViewsConfig.renderMode;
+	config.materializedViewsConfig.renderMode =
+		ENV.CHF_MAT_VIEWS_RENDER_MODE ??
+		config.materializedViewsConfig.renderMode ??
+		defaultConfig.materializedViewsConfig.renderMode;
 }
 
 let cachedConfig: ConfigFile | null = null;
 
 export function getConfig(): ConfigFile {
-  if (cachedConfig) {
-    return cachedConfig;
-  }
+	if (cachedConfig) {
+		return cachedConfig;
+	}
 
-  const config = loadConfigFile() ?? structuredClone(defaultConfig);
+	const config = loadConfigFile() ?? structuredClone(defaultConfig);
 
-  setupDbConfigs(config);
-  substituteEnv(config);
+	setupDbConfigs(config);
+	substituteEnv(config);
 
-  if (ENV.CHF_CACHE_CONFIG) {
-    cachedConfig = config;
-  }
+	if (ENV.CHF_CACHE_CONFIG) {
+		cachedConfig = config;
+	}
 
-  return config;
+	return config;
 }
 
 export function getDatabaseConfigs(): Map<string, DatabaseConfig> {
-  const result = getConfig().databaseConfigs.reduce(
-    (map, entry) => map.set(entry.name, entry.config),
-    new Map<string, DatabaseConfig>()
-  );
+	const result = getConfig().databaseConfigs.reduce(
+		(map, entry) => map.set(entry.name, entry.config),
+		new Map<string, DatabaseConfig>(),
+	);
 
-  return result;
+	return result;
 }
