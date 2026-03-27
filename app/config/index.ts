@@ -56,7 +56,8 @@ const defaultConfig: ConfigFile = {
 };
 
 function loadConfigFile(): ConfigFile | null {
-	const configPath: string = ENV.NODE_ENV !== 'production' ? path.resolve('./app/config/dev-config.json') : ENV.CHF_CONFIG_PATH;
+	const configPath: string =
+		ENV.NODE_ENV !== 'production' ? path.resolve('./app/config/dev-config.json') : ENV.CHF_CONFIG_PATH;
 
 	try {
 		if (fs.existsSync(configPath)) {
@@ -69,7 +70,10 @@ function loadConfigFile(): ConfigFile | null {
 	return null;
 }
 
-function getDefaultDatabaseConfig(): { dbConfig: DatabaseConfig; configName: string } | null {
+function getDefaultDatabaseConfig(): {
+	dbConfig: DatabaseConfig;
+	configName: string;
+} | null {
 	const { CHF_DB_URL: url, CHF_DB_USERNAME: username, CHF_DB_PASSWORD: password, CHF_DB_NAME: name } = ENV;
 
 	if (url && username && password && name) {
@@ -109,22 +113,28 @@ function substituteEnv(config: ConfigFile) {
 
 	config.exportConfig.format = ENV.CHF_EXPORT_FORMAT ?? config.exportConfig.format ?? defaultConfig.exportConfig.format;
 
-	config.exportConfig.padding = ENV.CHF_EXPORT_PADDING ?? config.exportConfig.padding ?? defaultConfig.exportConfig.padding;
+	config.exportConfig.padding =
+		ENV.CHF_EXPORT_PADDING ?? config.exportConfig.padding ?? defaultConfig.exportConfig.padding;
 
 	config.canvasConfig ??= { ...defaultConfig.canvasConfig };
 
 	config.canvasConfig.snapToGrid =
 		ENV.CHF_CANVAS_SNAP_TO_GRID ?? config.canvasConfig.snapToGrid ?? defaultConfig.canvasConfig.snapToGrid;
 
-	config.canvasConfig.gridSize = ENV.CHF_CANVAS_GRID_SIZE ?? config.canvasConfig.gridSize ?? defaultConfig.canvasConfig.gridSize;
+	config.canvasConfig.gridSize =
+		ENV.CHF_CANVAS_GRID_SIZE ?? config.canvasConfig.gridSize ?? defaultConfig.canvasConfig.gridSize;
 
 	config.canvasConfig.backgroundColor =
-		ENV.CHF_CANVAS_BACKGROUND_COLOR ?? config.canvasConfig.backgroundColor ?? defaultConfig.canvasConfig.backgroundColor;
+		ENV.CHF_CANVAS_BACKGROUND_COLOR ??
+		config.canvasConfig.backgroundColor ??
+		defaultConfig.canvasConfig.backgroundColor;
 
 	config.canvasConfig.autoFitView =
 		ENV.CHF_CANVAS_AUTO_FIT_VIEW ?? config.canvasConfig.autoFitView ?? defaultConfig.canvasConfig.autoFitView;
 
-	config.materializedViewsConfig ??= { ...defaultConfig.materializedViewsConfig };
+	config.materializedViewsConfig ??= {
+		...defaultConfig.materializedViewsConfig,
+	};
 
 	config.materializedViewsConfig.renderMode =
 		ENV.CHF_MAT_VIEWS_RENDER_MODE ??

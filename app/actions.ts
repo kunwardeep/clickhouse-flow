@@ -1,6 +1,13 @@
 'use server';
 
-import { getConfig, getDatabaseConfigs, DatabaseConfig, ExportConfig, CanvasConfig, MaterializedViewsConfig } from '@/app/config';
+import {
+	getConfig,
+	getDatabaseConfigs,
+	DatabaseConfig,
+	ExportConfig,
+	CanvasConfig,
+	MaterializedViewsConfig,
+} from '@/app/config';
 
 import { createClient } from '@/app/db';
 import { ChTable, getTables } from '@/app/db/tables';

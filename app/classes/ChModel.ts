@@ -93,7 +93,12 @@ function composeTransitions(createCommand: string, fullName: string, respectJoin
 	return result;
 }
 
-function matchTransitions(createCommand: string, fullName: string, isSource: boolean, regex: RegExp): TableTransition[] {
+function matchTransitions(
+	createCommand: string,
+	fullName: string,
+	isSource: boolean,
+	regex: RegExp,
+): TableTransition[] {
 	const result: TableTransition[] = [];
 
 	const matches = [...createCommand.matchAll(regex)];

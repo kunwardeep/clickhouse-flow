@@ -76,10 +76,22 @@ const ChTable: React.FC<ChTableProps> = (table) => {
 		<TableContainer component={Paper} elevation={5} aria-label="ch-table-container">
 			<StyledTable size={'small'} aria-label="ch-table" hasowndata={table.hasOwnData}>
 				<TableBody>
-					<ChTableHeader name={table.presentationName} hasOwnData={table.hasOwnData} openState={[columnsOpen, setColumnsOpen]} />
+					<ChTableHeader
+						name={table.presentationName}
+						hasOwnData={table.hasOwnData}
+						openState={[columnsOpen, setColumnsOpen]}
+					/>
 
 					<TableRow>
-						<TableCell style={{ paddingBottom: 0, paddingTop: 0, padding: 0, borderWidth: 0 }} colSpan={2}>
+						<TableCell
+							style={{
+								paddingBottom: 0,
+								paddingTop: 0,
+								padding: 0,
+								borderWidth: 0,
+							}}
+							colSpan={2}
+						>
 							<Collapse in={columnsOpen} timeout="auto" unmountOnExit>
 								<Box>
 									<Table size="small" aria-label="table-info" style={{ borderCollapse: 'collapse', borderSpacing: 0 }}>
@@ -87,7 +99,9 @@ const ChTable: React.FC<ChTableProps> = (table) => {
 											{sqlText != null ? (
 												<SqlTableInfo key={`${table.fullName}_sql`} sqlText={sqlText} />
 											) : (
-												table.columns.map((column) => <ChColumn key={`${table.fullName}_${column.position}`} {...column} />)
+												table.columns.map((column) => (
+													<ChColumn key={`${table.fullName}_${column.position}`} {...column} />
+												))
 											)}
 										</TableBody>
 									</Table>
@@ -115,13 +129,26 @@ const ChTable: React.FC<ChTableProps> = (table) => {
 					/>
 
 					<TableRow>
-						<TableCell style={{ paddingBottom: 0, paddingTop: 0, padding: 0, borderWidth: 0 }} colSpan={2}>
+						<TableCell
+							style={{
+								paddingBottom: 0,
+								paddingTop: 0,
+								padding: 0,
+								borderWidth: 0,
+							}}
+							colSpan={2}
+						>
 							<Collapse in={engineOpen} timeout="auto" unmountOnExit>
 								<Box>
 									<Table size="small" aria-label="engine-info" style={{ borderCollapse: 'collapse', borderSpacing: 0 }}>
 										<TableBody>
 											{nonEmptyEngineKeys.map((row, index) => (
-												<ChEngineRow key={`${table.fullName}_${row[0]}`} position={index + 1} name={row[0]} value={row[1]} />
+												<ChEngineRow
+													key={`${table.fullName}_${row[0]}`}
+													position={index + 1}
+													name={row[0]}
+													value={row[1]}
+												/>
 											))}
 										</TableBody>
 									</Table>

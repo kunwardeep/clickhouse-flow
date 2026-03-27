@@ -2,9 +2,9 @@ import { extractRefreshExpression } from '../app/classes/ChModel';
 
 describe('extractRefreshExpression', () => {
 	test('returns correct refresh expression for valid input', () => {
-		expect(extractRefreshExpression('CREATE MATERIALIZED VIEW example_mv REFRESH EVERY 1 MINUTE TO example AS SELECT 1')).toBe(
-			'REFRESH EVERY 1 MINUTE',
-		);
+		expect(
+			extractRefreshExpression('CREATE MATERIALIZED VIEW example_mv REFRESH EVERY 1 MINUTE TO example AS SELECT 1'),
+		).toBe('REFRESH EVERY 1 MINUTE');
 	});
 
 	test('handles multiple intervals correctly', () => {

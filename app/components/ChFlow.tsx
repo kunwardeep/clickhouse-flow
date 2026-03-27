@@ -119,7 +119,9 @@ const ChFlow: React.FC<ChFlowProps> = ({ tableNodes, transitions, appSettings, d
 					transitionPriorities[name] = y;
 				});
 
-				const orderedTransitions = transitions.toSorted((a, b) => transitionPriorities[a[1]] - transitionPriorities[b[1]]);
+				const orderedTransitions = transitions.toSorted(
+					(a, b) => transitionPriorities[a[1]] - transitionPriorities[b[1]],
+				);
 
 				reactFlowInstance.setEdges(calculateEdges(orderedTransitions));
 
@@ -164,7 +166,12 @@ const ChFlow: React.FC<ChFlowProps> = ({ tableNodes, transitions, appSettings, d
 		setControlsVisible(false);
 		await new Promise(requestAnimationFrame);
 
-		await exportReactFlow(bounds.width + padding * 2, bounds.height + padding * 2, dbConfigName, appSettings.exportConfig.format);
+		await exportReactFlow(
+			bounds.width + padding * 2,
+			bounds.height + padding * 2,
+			dbConfigName,
+			appSettings.exportConfig.format,
+		);
 
 		setControlsVisible(true);
 
