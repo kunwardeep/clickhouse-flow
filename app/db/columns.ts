@@ -1,21 +1,21 @@
 import { ClickHouseClient, executeQuery } from '.';
 
 export type ChColumn = {
-    database: string;
-    table: string;
-    name: string;
-    type: string;
-    position: number;
-    defaultKind: string;
-    defaultExpression: string;
+	database: string;
+	table: string;
+	name: string;
+	type: string;
+	position: number;
+	defaultKind: string;
+	defaultExpression: string;
 };
 
 export const getColumns = async (client: ClickHouseClient, databases: string[]): Promise<ChColumn[]> => {
-    const params = { 'databases': databases };
+	const params = { databases: databases };
 
-    const tables = await executeQuery<ChColumn>(client, getColumnsSql, params);
+	const tables = await executeQuery<ChColumn>(client, getColumnsSql, params);
 
-    return tables;
+	return tables;
 };
 
 const getColumnsSql: string = `

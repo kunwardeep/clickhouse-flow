@@ -8,13 +8,13 @@ services:
       - CLICKHOUSE_PASSWORD=developer
       - CLICKHOUSE_DB=migrations
     expose:
-      - "8123"
+      - '8123'
     ports:
-      - "8123:8123"
+      - '8123:8123'
     volumes:
       - clickhouse-data:/var/lib/clickhouse
     healthcheck:
-      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1'"]
+      test: ['CMD-SHELL', "clickhouse-client --query 'SELECT 1'"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -35,18 +35,18 @@ services:
       clickhouse:
         condition: service_healthy
     command: up
-  
+
   ch-flow:
     image: ghcr.io/mikeamputer/ch-flow:latest
     container_name: ch-flow
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
       - ./ch-flow.config.json:/app/config/config.json
     depends_on:
       ch-migrate:
         condition: service_completed_successfully
-  
+
   devcontainer:
     image: mcr.microsoft.com/devcontainers/base:latest
     container_name: devcontainer

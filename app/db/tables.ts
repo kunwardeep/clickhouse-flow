@@ -2,33 +2,33 @@ import { ClickHouseClient, executeQuery } from '.';
 import { format } from 'sql-formatter';
 
 export type ChTable = {
-    database: string;
-    name: string;
-    engine: string;
-    engineFull: string;
-    createCommand: string;
-    asSelect: string | null;
-    hasOwnData: boolean;
-    partitionKey: string;
-    sortingKey: string;
-    primaryKey: string;
-    samplingKey: string;
+	database: string;
+	name: string;
+	engine: string;
+	engineFull: string;
+	createCommand: string;
+	asSelect: string | null;
+	hasOwnData: boolean;
+	partitionKey: string;
+	sortingKey: string;
+	primaryKey: string;
+	samplingKey: string;
 };
 
 export const getTables = async (client: ClickHouseClient, databases: string[]): Promise<ChTable[]> => {
-    const params = { 'databases': databases };
+	const params = { databases: databases };
 
-    const tables = await executeQuery<ChTable>(client, getTablesSql, params);
+	const tables = await executeQuery<ChTable>(client, getTablesSql, params);
 
-    return tables.map((table) => ({
-        ...table,
-        createCommand: formatSql(table.createCommand)!,
-        asSelect: formatSql(table.asSelect),
-  }));
+	return tables.map((table) => ({
+		...table,
+		createCommand: formatSql(table.createCommand)!,
+		asSelect: formatSql(table.asSelect),
+	}));
 };
 
 const formatSql = (sql: string | null): string | null =>
-    sql ? format(sql, { language: 'clickhouse', expressionWidth: 40}) : null;
+	sql ? format(sql, { language: 'clickhouse', expressionWidth: 40 }) : null;
 
 const getTablesSql: string = `
 select

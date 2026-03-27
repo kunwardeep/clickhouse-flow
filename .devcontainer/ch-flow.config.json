@@ -1,6 +1,5 @@
 {
-  "databaseConfigs":
-  [
+  "databaseConfigs": [
     {
       "name": "shop_demo",
       "config": {
