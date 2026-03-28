@@ -48,7 +48,7 @@ services:
         condition: service_completed_successfully
 
   devcontainer:
-    image: mcr.microsoft.com/devcontainers/base:latest
+    image: mcr.microsoft.com/devcontainers/base:bookworm
     container_name: devcontainer
     command: sleep infinity
     volumes:
