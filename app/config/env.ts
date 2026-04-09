@@ -7,7 +7,7 @@ export const ENV = parseEnv(process.env, {
 
 	CHF_DB_URL: z.string().nonempty().optional(),
 	CHF_DB_USERNAME: z.string().nonempty().optional(),
-	CHF_DB_PASSWORD: z.string().optional(),
+	CHF_DB_PASSWORD: z.string().optional().default(''),
 	CHF_DB_NAME: z.string().nonempty().optional(),
 	CHF_DB_CONFIG_NAME: z.string().nonempty().optional(),
 

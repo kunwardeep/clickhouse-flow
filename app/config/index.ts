@@ -76,7 +76,7 @@ function getDefaultDatabaseConfig(): {
 } | null {
 	const { CHF_DB_URL: url, CHF_DB_USERNAME: username, CHF_DB_PASSWORD: password, CHF_DB_NAME: name } = ENV;
 
-	if (url && username && password && name) {
+	if (url && username && name) {
 		return {
 			dbConfig: {
 				connectionSettings: { url, username, password },
