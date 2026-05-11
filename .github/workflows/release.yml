@@ -81,39 +81,49 @@ jobs:
             exit 1
           fi
 
-      - name: Build docker image
-        run: |
-          docker build -t ${{ env.IMAGE_NAME }}:current .
+      - name: Set up QEMU
+        if: env.EXISTS_GHCR != 'true' || env.EXISTS_DOCKERHUB != 'true'
+        uses: docker/setup-qemu-action@v3
 
-      - name: Tag docker image
-        run: |
-          docker tag ${{ env.IMAGE_NAME }}:current ghcr.io/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:latest
-          docker tag ${{ env.IMAGE_NAME }}:current ghcr.io/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-          docker tag ${{ env.IMAGE_NAME }}:current ${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:latest
-          docker tag ${{ env.IMAGE_NAME }}:current ${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+      - name: Set up Docker Buildx
+        if: env.EXISTS_GHCR != 'true' || env.EXISTS_DOCKERHUB != 'true'
+        uses: docker/setup-buildx-action@v3
 
-      - name: List local docker images
-        run: docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}"
+      - name: Compose image tags for registries that need a push
+        id: image_tags
+        if: env.EXISTS_GHCR != 'true' || env.EXISTS_DOCKERHUB != 'true'
+        run: |
+          TAGS=""
+          if [ "$EXISTS_GHCR" != "true" ]; then
+            TAGS="${TAGS}ghcr.io/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:latest"$'\n'
+            TAGS="${TAGS}ghcr.io/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}"$'\n'
+          fi
+          if [ "$EXISTS_DOCKERHUB" != "true" ]; then
+            TAGS="${TAGS}${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:latest"$'\n'
+            TAGS="${TAGS}${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}"$'\n'
+          fi
+          {
+            echo 'tags<<EOF'
+            printf '%s' "$TAGS"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Login to GHCR
         if: env.EXISTS_GHCR != 'true'
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Push images to GHCR
-        if: env.EXISTS_GHCR != 'true'
-        run: |
-          docker push ghcr.io/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:latest
-          docker push ghcr.io/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-
       - name: Login to Docker Hub
         if: env.EXISTS_DOCKERHUB != 'true'
         run: echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ env.NAMESPACE }} --password-stdin
 
-      - name: Push images to Docker Hub
-        if: env.EXISTS_DOCKERHUB != 'true'
-        run: |
-          docker push ${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:latest
-          docker push ${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+      - name: Build and push multi-arch image (amd64 + arm64)
+        if: env.EXISTS_GHCR != 'true' || env.EXISTS_DOCKERHUB != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.image_tags.outputs.tags }}
 
   create-release:
     name: Create GitHub Release
