@@ -58,6 +58,8 @@ services:
 
 You can customize behavior using [environment variables](https://github.com/MikeAmputer/clickhouse-flow/wiki/Environment-Variables) or mounting a custom [config file](https://github.com/MikeAmputer/clickhouse-flow/wiki/Config-File).
 
+Published images on Docker Hub and GHCR are **multi-platform** (`linux/amd64`, `linux/arm64`). Docker selects the matching architecture automatically (including Apple Silicon).
+
 Image is also available at GHCR: `ghcr.io/mikeamputer/ch-flow:latest`
 
 ## Demo
