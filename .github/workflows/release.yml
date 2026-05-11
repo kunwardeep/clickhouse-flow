@@ -22,7 +22,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
+          node-version: "24"
 
       - name: Install dependencies
         run: npm ci
@@ -30,111 +30,164 @@ jobs:
       - name: Run unit tests with Jest
         run: npm test
 
-  build-and-push:
-    name: Build and Push
+  preflight:
+    name: Preflight
     runs-on: ubuntu-latest
     needs: test
-
     outputs:
-      version: ${{ steps.extract_version.outputs.version }}
+      version: ${{ steps.meta.outputs.version }}
+      namespace: ${{ steps.meta.outputs.namespace }}
+      dockerhub_username: ${{ steps.meta.outputs.dockerhub_username }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Extract version from package.json
-        id: extract_version
+      - name: Resolve version, namespace, and Docker Hub username
+        id: meta
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           VERSION=$(jq -r .version package.json)
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "Version extracted from package.json: $VERSION"
-
-      - name: Set image namespace variable
-        run: |
           NAMESPACE=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "NAMESPACE=$NAMESPACE" >> "$GITHUB_ENV"
-          echo "Namespace: $NAMESPACE"
+          DH_USER="${DOCKERHUB_USERNAME:-$NAMESPACE}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "namespace=$NAMESPACE" >> "$GITHUB_OUTPUT"
+          echo "dockerhub_username=$DH_USER" >> "$GITHUB_OUTPUT"
 
-      - name: Check if image tag exists on GHCR
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ steps.meta.outputs.dockerhub_username }}" --password-stdin
+
+      - name: Fail if version tag already exists on either registry
+        env:
+          NS: ${{ steps.meta.outputs.namespace }}
+          VER: ${{ steps.meta.outputs.version }}
         run: |
-          EXISTS_GHCR=false
-          if docker manifest inspect ghcr.io/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}; then
-            echo "$NAMESPACE/$IMAGE_NAME image tag $VERSION exists on GHCR"
-            EXISTS_GHCR=true
+          fail=0
+          if docker manifest inspect "ghcr.io/${NS}/${IMAGE_NAME}:${VER}" >/dev/null 2>&1; then
+            echo "::error::ghcr.io/${NS}/${IMAGE_NAME}:${VER} already exists"
+            fail=1
           fi
-          echo "EXISTS_GHCR=$EXISTS_GHCR" >> $GITHUB_ENV
-
-      - name: Check if image tag exists on Docker Hub
-        run: |
-          EXISTS_DOCKERHUB=false
-          if docker manifest inspect docker.io/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}; then
-            echo "$NAMESPACE/$IMAGE_NAME image tag $VERSION exists on Docker Hub"
-            EXISTS_DOCKERHUB=true
+          if docker manifest inspect "docker.io/${NS}/${IMAGE_NAME}:${VER}" >/dev/null 2>&1; then
+            echo "::error::docker.io/${NS}/${IMAGE_NAME}:${VER} already exists"
+            fail=1
           fi
-          echo "EXISTS_DOCKERHUB=$EXISTS_DOCKERHUB" >> $GITHUB_ENV
-
-      - name: Fail if both DockerHub and GHCR images exist
-        run: |
-          if [ "$EXISTS_GHCR" = "true" ] && [ "$EXISTS_DOCKERHUB" = "true" ]; then
-            echo "Both DockerHub and GHCR image tags exist. Failing the pipeline."
+          if [ "$fail" = "1" ]; then
+            echo "Bump package.json or delete the existing tag(s) and retry."
             exit 1
           fi
 
-      - name: Set up QEMU
-        if: env.EXISTS_GHCR != 'true' || env.EXISTS_DOCKERHUB != 'true'
-        uses: docker/setup-qemu-action@v3
+  # Native runners per arch
+  build-arch:
+    name: Build (${{ matrix.arch }})
+    needs: preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        if: env.EXISTS_GHCR != 'true' || env.EXISTS_DOCKERHUB != 'true'
         uses: docker/setup-buildx-action@v3
 
-      - name: Compose image tags for registries that need a push
-        id: image_tags
-        if: env.EXISTS_GHCR != 'true' || env.EXISTS_DOCKERHUB != 'true'
-        run: |
-          TAGS=""
-          if [ "$EXISTS_GHCR" != "true" ]; then
-            TAGS="${TAGS}ghcr.io/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:latest"$'\n'
-            TAGS="${TAGS}ghcr.io/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}"$'\n'
-          fi
-          if [ "$EXISTS_DOCKERHUB" != "true" ]; then
-            TAGS="${TAGS}${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:latest"$'\n'
-            TAGS="${TAGS}${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}"$'\n'
-          fi
-          {
-            echo 'tags<<EOF'
-            printf '%s' "$TAGS"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
-
       - name: Login to GHCR
-        if: env.EXISTS_GHCR != 'true'
-        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Login to Docker Hub
-        if: env.EXISTS_DOCKERHUB != 'true'
-        run: echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ env.NAMESPACE }} --password-stdin
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ needs.preflight.outputs.dockerhub_username }}" --password-stdin
 
-      - name: Build and push multi-arch image (amd64 + arm64)
-        if: env.EXISTS_GHCR != 'true' || env.EXISTS_DOCKERHUB != 'true'
+      - name: Build and push by digest
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.image_tags.outputs.tags }}
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,"name=ghcr.io/${{ needs.preflight.outputs.namespace }}/${{ env.IMAGE_NAME }},docker.io/${{ needs.preflight.outputs.namespace }}/${{ env.IMAGE_NAME }}",push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-manifests:
+    name: Merge multi-arch manifests
+    runs-on: ubuntu-latest
+    needs: [preflight, build-arch]
+
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ needs.preflight.outputs.dockerhub_username }}" --password-stdin
+
+      - name: Create and push multi-arch manifests
+        working-directory: /tmp/digests
+        env:
+          NS: ${{ needs.preflight.outputs.namespace }}
+          VER: ${{ needs.preflight.outputs.version }}
+        run: |
+          shopt -s nullglob
+          SRC_GHCR=()
+          SRC_DH=()
+          for d in *; do
+            SRC_GHCR+=("ghcr.io/${NS}/${IMAGE_NAME}@sha256:${d}")
+            SRC_DH+=("docker.io/${NS}/${IMAGE_NAME}@sha256:${d}")
+          done
+
+          docker buildx imagetools create \
+            -t "ghcr.io/${NS}/${IMAGE_NAME}:${VER}" \
+            -t "ghcr.io/${NS}/${IMAGE_NAME}:latest" \
+            "${SRC_GHCR[@]}"
+
+          docker buildx imagetools create \
+            -t "docker.io/${NS}/${IMAGE_NAME}:${VER}" \
+            -t "docker.io/${NS}/${IMAGE_NAME}:latest" \
+            "${SRC_DH[@]}"
 
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: [preflight, merge-manifests]
 
     steps:
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          tag: '${{ needs.build-and-push.outputs.version }}'
+          tag: "${{ needs.preflight.outputs.version }}"
           token: ${{ secrets.RELEASE_GITHUB_TOKEN }}
           generateReleaseNotes: true
           draft: true
